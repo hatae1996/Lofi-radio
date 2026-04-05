@@ -584,7 +584,120 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 10p
 body.admin #add-folder-btn { display: flex; }
 #admin-btn:hover { border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.65); }
 
-/* crossfade */
+/* ── MOBILE / TABLET RESPONSIVE ── */
+
+/* 태블릿 (768px ~ 1024px) — 패널 너비만 줄이기 */
+@media (max-width: 1024px) {
+  #cd { width: 560px; height: 560px; }
+  #cd-shadow { width: 560px; height: 560px; }
+  #cd-hole { width: 56px; height: 56px; }
+  #sidebar { width: 260px; right: -260px; }
+  body.sb-open #sb-toggle { right: 260px; }
+  #amb-panel { width: 240px; left: -240px; }
+  body.amb-open #amb-toggle { left: 240px; }
+}
+
+/* 모바일 (max 767px) — 하단 시트 방식 */
+@media (max-width: 767px) {
+  html, body { cursor: auto; }
+  #cursor { display: none; }
+
+  /* CD 모바일 크기 */
+  #cd { width: 72vw; height: 72vw; animation-duration: 40s; }
+  #cd-shadow { width: 72vw; height: 72vw; }
+  #cd-hole { width: 9vw; height: 9vw; }
+
+  /* now playing 위치 조정 */
+  #now-playing { top: 20px; left: 20px; }
+  #now-playing .song { font-size: 15px; }
+  #now-playing .artist { font-size: 12px; }
+  #waveform { top: 92px; left: 22px; }
+
+  /* 컨트롤 */
+  #controls { bottom: 80px; gap: 14px; }
+  .cbtn { width: 44px; height: 44px; cursor: auto; }
+  .cbtn.play { width: 58px; height: 58px; }
+
+  /* 프로그레스 */
+  #prog-wrap { padding: 0 20px 18px; }
+
+  /* 관리자 버튼 */
+  #admin-btn { top: 18px; right: 18px; cursor: auto; }
+
+  /* ── 사이드바 → 하단 시트 ── */
+  #sb-toggle {
+    top: auto; bottom: 18px; right: 18px;
+    transform: none;
+    width: 42px; height: 42px; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.15); border-right: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.07);
+  }
+  #sb-toggle svg { width: 12px; height: 12px; }
+  body.sb-open #sb-toggle { right: 18px; bottom: 18px; }
+  body.sb-open #sb-toggle svg { transform: none; }
+
+  #sidebar {
+    top: auto; bottom: -85vh; right: 0; left: 0;
+    width: 100%; height: 85vh;
+    border-left: none; border-top: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px 20px 0 0;
+    transition: bottom .35s cubic-bezier(.4,0,.2,1);
+  }
+  body.sb-open #sidebar { bottom: 0; right: 0; }
+
+  /* 시트 핸들 */
+  #sidebar::before {
+    content: ''; display: block;
+    width: 36px; height: 4px; border-radius: 2px;
+    background: rgba(255,255,255,0.15);
+    margin: 10px auto 0;
+  }
+
+  /* ── Ambient → 하단 시트 ── */
+  #amb-toggle {
+    top: auto; bottom: 18px; left: 18px;
+    transform: none;
+    width: 42px; height: 42px; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.15); border-left: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.07);
+  }
+  #amb-toggle svg { width: 12px; height: 12px; }
+  body.amb-open #amb-toggle { left: 18px; }
+  body.amb-open #amb-toggle svg { transform: none; }
+
+  #amb-panel {
+    top: auto; bottom: -85vh; left: 0; right: 0;
+    width: 100%; height: 85vh;
+    border-right: none; border-top: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px 20px 0 0;
+    transition: bottom .35s cubic-bezier(.4,0,.2,1);
+  }
+  body.amb-open #amb-panel { bottom: 0; left: 0; }
+
+  #amb-panel::before {
+    content: ''; display: block;
+    width: 36px; height: 4px; border-radius: 2px;
+    background: rgba(255,255,255,0.15);
+    margin: 10px auto 0;
+  }
+
+  /* 모바일에서 터치 커서 */
+  .cbtn, #sb-toggle, #amb-toggle, .track-item, .folder-card,
+  .mbtn, .file-zone, .amb-toggle-btn, #amb-stop-all,
+  #add-btn, #add-folder-btn, #add-amb-btn, #admin-btn,
+  #back-btn, #shuffle-btn, .track-del, .track-edit,
+  .folder-del, .amb-del, input[type=range], #prog-track {
+    cursor: auto;
+  }
+
+  /* 모바일에서 프로그레스 터치 영역 넓히기 */
+  #prog-track { height: 3px; }
+  #prog-track:hover { height: 3px; }
+
+  /* 커서 트레일 숨기기 */
+  .trail-dot { display: none !important; }
+}
+
 #xfade { position: fixed; inset: 0; z-index: 5; background: #0a0a0a; opacity: 0; pointer-events: none; transition: opacity .35s ease; }
 #xfade.on { opacity: 1; }
 </style>
@@ -1149,6 +1262,8 @@ audio.volume = 0.8;
 
 document.getElementById('sb-toggle').addEventListener('click', () => {
   document.body.classList.toggle('sb-open');
+  if (document.body.classList.contains('amb-open'))
+    document.body.classList.remove('amb-open');
   setTimeout(() => setHover('.track-item,.track-del,.track-edit,.folder-card,.folder-del'), 100);
 });
 
@@ -1511,7 +1626,25 @@ function renderAmbient() {
 // ── AMBIENT PANEL UI ─────────────────────────────────
 document.getElementById('amb-toggle').addEventListener('click', () => {
   document.body.classList.toggle('amb-open');
+  if (document.body.classList.contains('sb-open'))
+    document.body.classList.remove('sb-open');
   setTimeout(() => setHover('.amb-item,.amb-toggle-btn,.amb-del,#amb-stop-all,.amb-vol,#add-amb-btn'), 100);
+});
+
+// 모바일: 패널 바깥 탭하면 닫기
+document.addEventListener('click', e => {
+  const isMobile = window.innerWidth <= 767;
+  if (!isMobile) return;
+  if (document.body.classList.contains('sb-open')) {
+    if (!document.getElementById('sidebar').contains(e.target) &&
+        !document.getElementById('sb-toggle').contains(e.target))
+      document.body.classList.remove('sb-open');
+  }
+  if (document.body.classList.contains('amb-open')) {
+    if (!document.getElementById('amb-panel').contains(e.target) &&
+        !document.getElementById('amb-toggle').contains(e.target))
+      document.body.classList.remove('amb-open');
+  }
 });
 
 document.getElementById('amb-stop-all').addEventListener('click', () => {
@@ -1618,6 +1751,7 @@ for (let i = 0; i < TRAIL_COUNT; i++) {
   const size = Math.max(2, 7 - i * 0.5);
   dot.style.cssText = `position:fixed;border-radius:50%;pointer-events:none;z-index:9998;width:${size}px;height:${size}px;background:rgba(255,255,255,${0.55-i*0.04});transform:translate(-50%,-50%);transition:opacity .3s ease;`;
   document.body.appendChild(dot);
+  dot.classList.add('trail-dot');
   trail.push({ el: dot, x: 0, y: 0 });
 }
 let mouseX = 0, mouseY = 0;
