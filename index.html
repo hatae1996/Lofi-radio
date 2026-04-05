@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>lofi radio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #0a0a0a;
+  font-family: 'DM Sans', sans-serif;
+  cursor: none;
+  color: white;
+}
+
+/* ── CURSOR ── */
+#cursor {
+  position: fixed; width: 8px; height: 8px;
+  background: rgba(255,255,255,0.85); border-radius: 50%;
+  pointer-events: none; z-index: 9999;
+  transform: translate(-50%,-50%);
+  transition: width .18s ease, height .18s ease, background .18s ease, opacity .3s ease;
+}
+#cursor.hidden { opacity: 0; }
+#cursor.hover { width: 26px; height: 26px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.3); }
+
+/* ── BG ── */
+#bg-img {
+  position: fixed; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; z-index: 0;
+  opacity: 1; transition: opacity .6s ease;
+  filter: blur(10px) brightness(0.65);
+  transform: scale(1.03);
+}
+#bg-img.hidden { opacity: 0; }
+
+/* ── CD VINYL ── */
+#cd-wrap {
+  position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 4; pointer-events: none;
+  display: none;
+}
+#cd-wrap.visible { display: block; pointer-events: auto; }
+
+#cd {
+  position: relative;
+  width: 840px; height: 840px;
+  border-radius: 50%;
+  animation: cd-spin 40s linear infinite;
+  animation-play-state: paused;
+}
+body.playing #cd { animation-play-state: running; }
+@keyframes cd-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* 바깥 테두리 링 */
+#cd::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 2px rgba(255,255,255,0.12),
+    inset 0 0 0 10px rgba(0,0,0,0.35),
+    inset 0 0 0 12px rgba(255,255,255,0.06),
+    inset 0 0 0 40px rgba(0,0,0,0.25),
+    inset 0 0 0 42px rgba(255,255,255,0.04);
+  z-index: 2;
+}
+
+/* 앨범 이미지 원형 클립 */
+#cd-img {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  object-fit: cover;
+  width: 100%; height: 100%;
+  z-index: 1;
+}
+
+/* CD 광택 오버레이 */
+#cd-gloss {
+  position: absolute; inset: 0; border-radius: 50%; z-index: 3;
+  background: conic-gradient(
+    rgba(255,255,255,0.08) 0deg,
+    rgba(255,255,255,0.02) 60deg,
+    rgba(255,255,255,0.1) 120deg,
+    rgba(255,255,255,0.01) 180deg,
+    rgba(255,255,255,0.07) 240deg,
+    rgba(255,255,255,0.01) 300deg,
+    rgba(255,255,255,0.08) 360deg
+  );
+}
+
+/* 가운데 구멍 */
+#cd-hole {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 84px; height: 84px; border-radius: 50%;
+  background: #0a0a0a;
+  z-index: 4;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.1), 0 0 0 4px rgba(0,0,0,0.5);
+}
+
+/* CD 없을 때 플레이스홀더 CD */
+#cd-empty {
+  position: absolute; inset: 0; border-radius: 50%; z-index: 1;
+  background: radial-gradient(circle at 50% 50%,
+    #2a2a2a 0%, #1a1a1a 40%, #222 60%, #1a1a1a 100%
+  );
+}
+
+/* 그림자 */
+#cd-shadow {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 840px; height: 840px; border-radius: 50%;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.7), 0 6px 24px rgba(0,0,0,0.5);
+  z-index: 0; pointer-events: none;
+}
+#bg-placeholder {
+  position: fixed; inset: 0; z-index: 0;
+  background: #0d0d0d;
+  display: flex; align-items: center; justify-content: center;
+}
+#bg-placeholder svg { opacity: 0.05; }
+
+#grain {
+  position: fixed; inset: -50%; width: 200%; height: 200%;
+  z-index: 1; opacity: 0.04; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grain .45s steps(1) infinite;
+}
+@keyframes grain {
+  0%   { transform: translate(0,0); }
+  25%  { transform: translate(-3%,-2%); }
+  50%  { transform: translate(2%,3%); }
+  75%  { transform: translate(-1%,2%); }
+}
+
+#overlay { position: fixed; inset: 0; z-index: 2; background: rgba(0,0,0,0.2); pointer-events: none; }
+#vignette-top { position: fixed; top: 0; left: 0; right: 0; height: 130px; z-index: 3; pointer-events: none; background: linear-gradient(to bottom, rgba(0,0,0,0.45), transparent); }
+#vignette-bottom { position: fixed; bottom: 0; left: 0; right: 0; height: 220px; z-index: 3; pointer-events: none; background: linear-gradient(to top, rgba(0,0,0,0.6), transparent); opacity: 0; transition: opacity .4s ease; }
+body.ui-visible #vignette-bottom { opacity: 1; }
+
+/* ── UI FADE ── */
+.ui-el { opacity: 0; transition: opacity .3s ease; pointer-events: none; }
+body.ui-visible .ui-el { opacity: 1; pointer-events: auto; }
+
+/* ── NOW PLAYING ── */
+#now-playing { position: fixed; top: 28px; left: 32px; z-index: 10; }
+#now-playing .lbl { font-size: 10px; font-weight: 400; letter-spacing: .18em; text-transform: uppercase; color: rgba(255,255,255,0.28); margin-bottom: 5px; }
+#now-playing .song { font-size: 18px; font-weight: 500; color: rgba(255,255,255,0.92); letter-spacing: -.015em; line-height: 1.2; }
+#now-playing .artist { font-size: 13px; font-weight: 300; color: rgba(255,255,255,0.4); margin-top: 3px; }
+
+/* waveform */
+#waveform { position: fixed; top: 110px; left: 34px; z-index: 10; display: flex; align-items: flex-end; gap: 3px; height: 16px; }
+.wb { width: 3px; border-radius: 2px; background: rgba(255,255,255,0.28); transform-origin: bottom; animation: wa 1.3s ease-in-out infinite; animation-play-state: paused; }
+.wb:nth-child(1){animation-delay:0s} .wb:nth-child(2){animation-delay:.18s} .wb:nth-child(3){animation-delay:.06s}
+.wb:nth-child(4){animation-delay:.24s} .wb:nth-child(5){animation-delay:.12s} .wb:nth-child(6){animation-delay:.3s} .wb:nth-child(7){animation-delay:.09s}
+@keyframes wa { 0%,100%{transform:scaleY(.3)} 50%{transform:scaleY(1)} }
+body.playing .wb { animation-play-state: running; }
+
+/* ── CONTROLS ── */
+#controls { position: fixed; bottom: 44px; left: 50%; transform: translateX(-50%); z-index: 11; display: flex; align-items: center; gap: 18px; }
+.cbtn {
+  width: 42px; height: 42px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.04);
+  display: flex; align-items: center; justify-content: center;
+  cursor: none; transition: border-color .2s, background .2s, transform .12s;
+}
+.cbtn:hover { border-color: rgba(255,255,255,0.45); background: rgba(255,255,255,0.1); transform: scale(1.08); }
+.cbtn:active { transform: scale(0.94); }
+.cbtn svg { width: 16px; height: 16px; fill: rgba(255,255,255,0.75); pointer-events: none; }
+.cbtn.play { width: 56px; height: 56px; border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.07); }
+.cbtn.play svg { width: 22px; height: 22px; }
+
+/* ── PROGRESS ── */
+#prog-wrap { position: fixed; bottom: 0; left: 0; right: 0; z-index: 10; padding: 0 32px 14px; }
+#time-row { display: flex; justify-content: space-between; font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 300; color: rgba(255,255,255,0.25); letter-spacing: .05em; margin-bottom: 7px; }
+#prog-track { width: 100%; height: 1px; background: rgba(255,255,255,0.1); position: relative; cursor: none; transition: height .2s; }
+#prog-track:hover { height: 2px; }
+#prog-fill { height: 100%; background: rgba(255,255,255,0.5); border-radius: 1px; width: 0%; transition: width .4s linear; }
+#prog-thumb { position: absolute; top: 50%; transform: translate(-50%,-50%) scale(0); width: 10px; height: 10px; border-radius: 50%; background: white; left: 0%; transition: transform .2s; pointer-events: none; }
+#prog-track:hover #prog-thumb { transform: translate(-50%,-50%) scale(1); }
+
+/* ── AMBIENT PANEL ── */
+#amb-toggle {
+  position: fixed; top: 50%; left: 0; transform: translateY(-50%);
+  z-index: 20; width: 18px; height: 52px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); border-left: none;
+  border-radius: 0 5px 5px 0;
+  display: flex; align-items: center; justify-content: center;
+  cursor: none; transition: background .2s, left .35s cubic-bezier(.4,0,.2,1);
+  pointer-events: auto !important; opacity: 1 !important;
+}
+#amb-toggle:hover { background: rgba(255,255,255,0.1); }
+#amb-toggle svg { width: 9px; height: 9px; transition: transform .35s cubic-bezier(.4,0,.2,1); }
+body.amb-open #amb-toggle { left: 260px; }
+body.amb-open #amb-toggle svg { transform: rotate(180deg); }
+
+#amb-panel {
+  position: fixed; top: 0; left: -260px; width: 260px; height: 100%;
+  z-index: 15; display: flex; flex-direction: column;
+  background: rgba(7,7,7,0.7); backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
+  border-right: 1px solid rgba(255,255,255,0.07);
+  transition: left .35s cubic-bezier(.4,0,.2,1);
+}
+body.amb-open #amb-panel { left: 0; }
+
+#amb-head {
+  padding: 26px 18px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+#amb-head .lbl { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: rgba(255,255,255,0.22); }
+#amb-head .title { font-size: 20px; font-weight: 500; color: rgba(255,255,255,0.82); letter-spacing: -.02em; margin-top: 2px; }
+
+#amb-list { flex: 1; overflow-y: auto; padding: 14px 18px; display: flex; flex-direction: column; gap: 6px; scrollbar-width: none; }
+#amb-list::-webkit-scrollbar { display: none; }
+
+.amb-item {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 12px 14px; border-radius: 10px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+  transition: background .2s, border-color .2s;
+}
+.amb-item.active { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); }
+
+.amb-top { display: flex; align-items: center; gap: 10px; }
+.amb-icon { font-size: 18px; width: 28px; text-align: center; flex-shrink: 0; }
+.amb-name { font-size: 13px; font-weight: 400; color: rgba(255,255,255,0.65); flex: 1; }
+.amb-toggle-btn {
+  width: 28px; height: 16px; border-radius: 8px;
+  background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15);
+  position: relative; cursor: none; flex-shrink: 0;
+  transition: background .2s, border-color .2s;
+}
+.amb-toggle-btn::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.4);
+  transition: left .2s, background .2s;
+}
+.amb-item.active .amb-toggle-btn { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.35); }
+.amb-item.active .amb-toggle-btn::after { left: 14px; background: white; }
+
+.amb-vol {
+  -webkit-appearance: none; height: 1px;
+  background: rgba(255,255,255,0.12); border-radius: 1px; outline: none;
+  cursor: none; width: 100%; display: none;
+  transition: background .2s;
+}
+.amb-item.active .amb-vol { display: block; }
+.amb-vol::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.65); cursor: none; }
+
+#amb-foot {
+  padding: 14px 18px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+#amb-stop-all {
+  width: 100%; padding: 9px; border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1); background: transparent;
+  font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 400;
+  color: rgba(255,255,255,0.4); cursor: none;
+  transition: border-color .2s, background .2s, color .2s;
+}
+#amb-stop-all:hover { border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.7); }
+
+
+#sb-toggle {
+  position: fixed; top: 50%; right: 0; transform: translateY(-50%);
+  z-index: 20; width: 18px; height: 52px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); border-right: none;
+  border-radius: 5px 0 0 5px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: none; transition: background .2s, right .35s cubic-bezier(.4,0,.2,1);
+  pointer-events: auto !important; opacity: 1 !important;
+}
+#sb-toggle:hover { background: rgba(255,255,255,0.1); }
+#sb-toggle svg { width: 9px; height: 9px; transition: transform .35s cubic-bezier(.4,0,.2,1); }
+body.sb-open #sb-toggle { right: 300px; }
+body.sb-open #sb-toggle svg { transform: rotate(180deg); }
+
+/* ── SIDEBAR ── */
+#sidebar {
+  position: fixed; top: 0; right: -300px; width: 300px; height: 100%;
+  z-index: 15; display: flex; flex-direction: column;
+  background: rgba(7,7,7,0.7); backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
+  border-left: 1px solid rgba(255,255,255,0.07);
+  transition: right .35s cubic-bezier(.4,0,.2,1);
+}
+body.sb-open #sidebar { right: 0; }
+
+#sb-head {
+  padding: 26px 18px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 10px;
+}
+#sb-head .info .lbl { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: rgba(255,255,255,0.22); }
+#sb-head .info .cnt { font-size: 20px; font-weight: 500; color: rgba(255,255,255,0.82); letter-spacing: -.02em; margin-top: 2px; }
+
+#add-btn, #add-folder-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05);
+  font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 400;
+  color: rgba(255,255,255,0.5); cursor: none; white-space: nowrap;
+  transition: border-color .2s, background .2s, color .2s;
+}
+#add-btn:hover, #add-folder-btn:hover { border-color: rgba(255,255,255,0.35); background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8); }
+#add-btn svg, #add-folder-btn svg { width: 11px; height: 11px; fill: currentColor; flex-shrink: 0; }
+
+/* ── FOLDER VIEW ── */
+#folder-view, #track-view { flex: 1; overflow-y: auto; padding: 10px 14px; scrollbar-width: none; display: flex; flex-direction: column; gap: 8px; }
+#folder-view::-webkit-scrollbar, #track-view::-webkit-scrollbar { display: none; }
+#track-view { display: none; }
+
+.folder-card {
+  position: relative; width: 100%; height: 80px;
+  border-radius: 12px; overflow: hidden; cursor: none; flex-shrink: 0;
+  transition: transform .15s ease;
+}
+.folder-card:hover { transform: scale(1.015); }
+.folder-card.playing { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.35); }
+
+.folder-bg {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+  opacity: 0.45; transition: opacity .2s;
+}
+.folder-card:hover .folder-bg { opacity: 0.6; }
+.folder-card.playing .folder-bg { opacity: 0.65; }
+.folder-bg-empty { position: absolute; inset: 0; background: rgba(255,255,255,0.03); }
+
+/* 폴더 카드 그라데이션 */
+.folder-grad {
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.1) 100%);
+}
+
+.folder-label {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 10px 36px 10px 13px;
+}
+.folder-name {
+  font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.92);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-shadow: 0 1px 8px rgba(0,0,0,0.8); line-height: 1.3;
+}
+.folder-meta {
+  font-size: 11px; font-weight: 300; color: rgba(255,255,255,0.45);
+  margin-top: 2px; text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+}
+.folder-card.playing .folder-name { color: white; }
+
+.folder-del {
+  position: absolute; top: 8px; right: 8px;
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  cursor: none; opacity: 0; transition: opacity .15s, background .15s;
+}
+.folder-card:hover .folder-del { opacity: 1; }
+.folder-del:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.3); }
+.folder-del svg { width: 9px; height: 9px; fill: rgba(255,255,255,0.55); pointer-events: none; }
+
+/* 트랙 뷰 헤더 (뒤로가기) */
+#track-view-head {
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+}
+#back-btn {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.12); background: transparent;
+  display: flex; align-items: center; justify-content: center;
+  cursor: none; flex-shrink: 0; transition: border-color .2s, background .2s;
+}
+#back-btn:hover { border-color: rgba(255,255,255,0.28); background: rgba(255,255,255,0.07); }
+#back-btn svg { width: 10px; height: 10px; fill: rgba(255,255,255,0.5); pointer-events: none; }
+#track-view-folder-name {
+  font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.8);
+  flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* playlist (track list) */
+#playlist { flex: 1; overflow-y: auto; padding: 10px 14px; scrollbar-width: none; display: flex; flex-direction: column; gap: 8px; }
+#playlist::-webkit-scrollbar { display: none; }
+
+
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%; gap: 12px; padding: 40px 20px; text-align: center;
+}
+.empty-state svg { opacity: 0.1; }
+.empty-state p { font-size: 13px; color: rgba(255,255,255,0.22); line-height: 1.7; font-weight: 300; }
+
+/* track card */
+.track-item {
+  position: relative; width: 100%; height: 72px;
+  border-radius: 10px; overflow: hidden; cursor: none; flex-shrink: 0;
+  transition: transform .15s ease;
+}
+.track-item:hover { transform: scale(1.015); }
+.track-item.active { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.38); }
+
+.track-bg {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+  opacity: 0.5; transition: opacity .2s;
+}
+.track-item:hover .track-bg { opacity: 0.65; }
+.track-item.active .track-bg { opacity: 0.7; }
+.track-bg-empty { position: absolute; inset: 0; background: rgba(255,255,255,0.03); }
+
+.track-label { position: absolute; bottom: 0; left: 0; right: 0; padding: 10px 34px 10px 13px; }
+.track-title {
+  font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.9);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3;
+  text-shadow: 0 1px 8px rgba(0,0,0,0.7);
+}
+.track-artist {
+  font-size: 11px; font-weight: 300; color: rgba(255,255,255,0.42);
+  margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+}
+.track-item.active .track-title { color: white; }
+
+.track-dot { position: absolute; top: 10px; right: 10px; width: 6px; height: 6px; border-radius: 50%; background: white; opacity: 0; transition: opacity .2s; }
+.track-item.active .track-dot { opacity: 0.65; }
+
+.track-del {
+  position: absolute; top: 8px; right: 8px;
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center;
+  cursor: none; opacity: 0; transition: opacity .15s, background .15s;
+}
+.track-edit {
+  position: absolute; top: 8px; right: 34px;
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center;
+  cursor: none; opacity: 0; transition: opacity .15s, background .15s;
+}
+.track-item:hover .track-del,
+.track-item:hover .track-edit { opacity: 1; }
+.track-del:hover, .track-edit:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.3); }
+.track-del svg, .track-edit svg { width: 9px; height: 9px; fill: rgba(255,255,255,0.55); pointer-events: none; }
+
+/* shuffle */
+#shuffle-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.12); background: transparent;
+  cursor: none; transition: border-color .2s, background .2s;
+  flex-shrink: 0;
+}
+#shuffle-btn:hover { border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.07); }
+#shuffle-btn.on { border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.1); }
+#shuffle-btn svg { width: 13px; height: 13px; fill: rgba(255,255,255,0.35); pointer-events: none; }
+#shuffle-btn.on svg { fill: rgba(255,255,255,0.8); }
+
+/* sidebar footer */
+#sb-foot { padding: 14px 18px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; gap: 10px; }
+#sb-foot svg { width: 13px; height: 13px; fill: rgba(255,255,255,0.25); flex-shrink: 0; }
+input[type="range"] { flex: 1; -webkit-appearance: none; height: 1px; background: rgba(255,255,255,0.15); border-radius: 1px; outline: none; cursor: none; }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.65); cursor: none; }
+
+/* ── ADD TRACK MODAL ── */
+#modal-backdrop {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(0,0,0,0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .25s ease;
+}
+#modal-backdrop.open { opacity: 1; pointer-events: auto; }
+
+#modal {
+  width: 360px; border-radius: 18px;
+  background: rgba(14,14,14,0.96);
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 28px 26px 24px;
+  display: flex; flex-direction: column; gap: 18px;
+  transform: translateY(10px); transition: transform .25s ease;
+}
+#modal-backdrop.open #modal { transform: translateY(0); }
+#modal h2 { font-size: 15px; font-weight: 500; color: rgba(255,255,255,0.82); letter-spacing: -.01em; }
+
+/* 파일 선택 존 */
+.file-zone {
+  border: 1px dashed rgba(255,255,255,0.14); border-radius: 10px;
+  padding: 14px 16px; display: flex; align-items: center; gap: 13px;
+  cursor: none; transition: border-color .2s, background .2s;
+  position: relative; overflow: hidden; min-height: 62px;
+}
+.file-zone:hover { border-color: rgba(255,255,255,0.28); background: rgba(255,255,255,0.03); }
+.file-zone.filled { border-style: solid; border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.04); }
+.file-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: none; width: 100%; height: 100%; }
+
+.fz-icon {
+  width: 34px; height: 34px; border-radius: 8px;
+  background: rgba(255,255,255,0.06); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.fz-icon svg { width: 15px; height: 15px; fill: rgba(255,255,255,0.32); }
+
+.img-thumb {
+  width: 50px; height: 34px; border-radius: 5px;
+  object-fit: cover; flex-shrink: 0; display: none;
+}
+
+.fz-text { flex: 1; min-width: 0; }
+.fz-hint { font-size: 12px; color: rgba(255,255,255,0.38); }
+.fz-name { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.75); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: none; }
+
+/* 텍스트 필드 */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 10px; font-weight: 400; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,0.28); }
+.field input[type="text"] {
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px; padding: 10px 13px;
+  font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 400;
+  color: rgba(255,255,255,0.85); outline: none; width: 100%; cursor: text;
+  transition: border-color .2s, background .2s;
+}
+.field input[type="text"]:focus { border-color: rgba(255,255,255,0.28); background: rgba(255,255,255,0.07); }
+.field input[type="text"]::placeholder { color: rgba(255,255,255,0.18); }
+
+/* 모달 버튼 공통 */
+#modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+.mbtn {
+  padding: 7px 16px; border-radius: 20px;
+  font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 400;
+  cursor: none; transition: background .2s, border-color .2s, color .2s;
+  white-space: nowrap;
+}
+#modal-cancel, #folder-modal-cancel, #edit-cancel {
+  background: transparent; border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.35);
+}
+#modal-cancel:hover, #folder-modal-cancel:hover, #edit-cancel:hover {
+  border-color: rgba(255,255,255,0.22); color: rgba(255,255,255,0.55);
+}
+#modal-confirm, #folder-modal-confirm, #edit-confirm {
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.75);
+}
+#modal-confirm:hover, #folder-modal-confirm:hover, #edit-confirm:hover {
+  background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.95);
+}
+#modal-confirm:disabled { opacity: 0.2; pointer-events: none; }
+
+/* admin mode */
+#add-folder-btn, #add-btn { display: none; }
+body.admin #add-folder-btn { display: flex; }
+#admin-btn:hover { border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.65); }
+
+/* crossfade */
+#xfade { position: fixed; inset: 0; z-index: 5; background: #0a0a0a; opacity: 0; pointer-events: none; transition: opacity .35s ease; }
+#xfade.on { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+
+<img id="bg-img" class="hidden" src="" alt="">
+<div id="bg-placeholder">
+  <svg width="90" height="90" viewBox="0 0 80 80" fill="none">
+    <circle cx="40" cy="40" r="39" stroke="white" stroke-width="0.5"/>
+    <circle cx="40" cy="40" r="20" stroke="white" stroke-width="0.5"/>
+    <circle cx="40" cy="40" r="5" fill="white"/>
+  </svg>
+</div>
+
+<div id="cd-wrap">
+  <div id="cd-shadow"></div>
+  <div id="cd">
+    <div id="cd-empty"></div>
+    <img id="cd-img" src="" alt="" style="display:none;">
+    <div id="cd-gloss"></div>
+    <div id="cd::before"></div>
+    <div id="cd-hole"></div>
+  </div>
+</div>
+
+
+<div id="overlay"></div>
+<div id="vignette-top"></div>
+<div id="vignette-bottom"></div>
+<div id="xfade"></div>
+<audio id="audio"></audio>
+
+<!-- now playing -->
+<div id="now-playing" class="ui-el">
+  <div class="lbl">now playing</div>
+  <div class="song" id="song-title">—</div>
+  <div class="artist" id="artist-el">—</div>
+</div>
+<div id="waveform" class="ui-el">
+  <div class="wb"></div><div class="wb"></div><div class="wb"></div>
+  <div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div>
+</div>
+
+<!-- controls -->
+<div id="controls" class="ui-el">
+  <button class="cbtn" id="btn-prev"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg></button>
+  <button class="cbtn play" id="btn-play"><svg viewBox="0 0 24 24" id="play-icon"><path d="M8 5v14l11-7z"/></svg></button>
+  <button class="cbtn" id="btn-next"><svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zm2.5-8.3 5.47 3.8-5.47 3.8V9.7zM16 6h2v12h-2z"/></svg></button>
+</div>
+
+<!-- progress -->
+<div id="prog-wrap" class="ui-el">
+  <div id="time-row"><span id="t-cur">0:00</span><span id="t-tot">0:00</span></div>
+  <div id="prog-track"><div id="prog-fill"></div><div id="prog-thumb"></div></div>
+</div>
+
+<!-- ambient toggle -->
+<div id="amb-toggle">
+  <svg viewBox="0 0 10 10" fill="none">
+    <path d="M3 1l4 4-4 4" stroke="rgba(255,255,255,0.4)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</div>
+
+<!-- ambient panel -->
+<div id="amb-panel">
+  <div id="amb-head">
+    <div class="lbl">ambient</div>
+    <div class="title">분위기 믹서</div>
+  </div>
+  <div id="amb-list">
+    <div class="amb-item" data-sound="rain">
+      <div class="amb-top">
+        <div class="amb-icon">🌧</div>
+        <div class="amb-name">빗소리</div>
+        <div class="amb-toggle-btn"></div>
+      </div>
+      <input type="range" class="amb-vol" min="0" max="100" value="40">
+    </div>
+    <div class="amb-item" data-sound="cafe">
+      <div class="amb-top">
+        <div class="amb-icon">☕</div>
+        <div class="amb-name">카페 소음</div>
+        <div class="amb-toggle-btn"></div>
+      </div>
+      <input type="range" class="amb-vol" min="0" max="100" value="40">
+    </div>
+    <div class="amb-item" data-sound="wind">
+      <div class="amb-top">
+        <div class="amb-icon">🌬</div>
+        <div class="amb-name">바람 소리</div>
+        <div class="amb-toggle-btn"></div>
+      </div>
+      <input type="range" class="amb-vol" min="0" max="100" value="40">
+    </div>
+    <div class="amb-item" data-sound="fire">
+      <div class="amb-top">
+        <div class="amb-icon">🔥</div>
+        <div class="amb-name">모닥불 소리</div>
+        <div class="amb-toggle-btn"></div>
+      </div>
+      <input type="range" class="amb-vol" min="0" max="100" value="40">
+    </div>
+    <div class="amb-item" data-sound="wave">
+      <div class="amb-top">
+        <div class="amb-icon">🌊</div>
+        <div class="amb-name">파도 소리</div>
+        <div class="amb-toggle-btn"></div>
+      </div>
+      <input type="range" class="amb-vol" min="0" max="100" value="40">
+    </div>
+    <div class="amb-item" data-sound="thunder">
+      <div class="amb-top">
+        <div class="amb-icon">⚡</div>
+        <div class="amb-name">천둥 소리</div>
+        <div class="amb-toggle-btn"></div>
+      </div>
+      <input type="range" class="amb-vol" min="0" max="100" value="40">
+    </div>
+    <div class="amb-item" data-sound="forest">
+      <div class="amb-top">
+        <div class="amb-icon">🌿</div>
+        <div class="amb-name">숲 소리</div>
+        <div class="amb-toggle-btn"></div>
+      </div>
+      <input type="range" class="amb-vol" min="0" max="100" value="40">
+    </div>
+  </div>
+  <div id="amb-foot">
+    <button id="amb-stop-all">모두 끄기</button>
+  </div>
+</div>
+
+<!-- sidebar toggle -->
+<div id="sb-toggle">
+  <svg viewBox="0 0 10 10" fill="none">
+    <path d="M7 1L3 5l4 4" stroke="rgba(255,255,255,0.4)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</div>
+
+<!-- sidebar -->
+<div id="sidebar">
+  <!-- 헤더: 폴더 뷰 -->
+  <div id="sb-head">
+    <div class="info">
+      <div class="lbl">playlist</div>
+      <div class="cnt" id="folder-count">0 folders</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button id="shuffle-btn" title="셔플">
+        <svg viewBox="0 0 24 24"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+      </button>
+      <button id="add-folder-btn">
+        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        폴더 추가
+      </button>
+    </div>
+  </div>
+
+  <!-- 폴더 뷰 -->
+  <div id="folder-view"></div>
+
+  <!-- 트랙 뷰 (폴더 안) -->
+  <div id="track-view-wrap" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
+    <div id="track-view-head">
+      <button id="back-btn">
+        <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+      </button>
+      <div id="track-view-folder-name"></div>
+      <button id="add-btn" style="flex-shrink:0;">
+        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        곡 추가
+      </button>
+    </div>
+    <div id="playlist"></div>
+  </div>
+
+  <div id="sb-foot">
+    <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+    <input type="range" id="vol" min="0" max="100" value="80">
+  </div>
+</div>
+
+<!-- admin button -->
+<button id="admin-btn" class="ui-el" style="
+  position:fixed; top:24px; right:32px; z-index:10;
+  background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);
+  border-radius:20px; padding:5px 12px;
+  font-family:'DM Sans',sans-serif; font-size:11px; color:rgba(255,255,255,0.4);
+  cursor:none; transition:border-color .2s, background .2s, color .2s;
+">🔒</button>
+
+<!-- 관리자 로그인 모달 -->
+<div id="admin-modal-backdrop" style="position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.72);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s ease;">
+  <div id="admin-modal" style="width:300px;border-radius:18px;background:rgba(14,14,14,0.96);border:1px solid rgba(255,255,255,0.1);padding:28px 26px 24px;display:flex;flex-direction:column;gap:16px;transform:translateY(10px);transition:transform .25s ease;">
+    <h2 style="font-size:15px;font-weight:500;color:rgba(255,255,255,0.82);">관리자 로그인</h2>
+    <div class="field">
+      <label>비밀번호</label>
+      <input type="password" id="admin-pw-input" placeholder="비밀번호 입력">
+    </div>
+    <p id="admin-pw-error" style="display:none;font-size:12px;color:rgba(255,80,80,0.8);margin-top:-8px;">비밀번호가 틀렸어요</p>
+    <div id="modal-btns">
+      <button class="mbtn" id="admin-modal-cancel">취소</button>
+      <button class="mbtn" id="admin-modal-confirm">로그인</button>
+    </div>
+  </div>
+</div>
+
+
+<div id="folder-modal-backdrop" style="position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.72);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s ease;">
+  <div id="folder-modal" style="width:320px;border-radius:18px;background:rgba(14,14,14,0.96);border:1px solid rgba(255,255,255,0.1);padding:28px 26px 24px;display:flex;flex-direction:column;gap:18px;transform:translateY(10px);transition:transform .25s ease;">
+    <h2 style="font-size:15px;font-weight:500;color:rgba(255,255,255,0.82);">폴더 추가</h2>
+    <div class="field">
+      <label>폴더 이름</label>
+      <input type="text" id="folder-name-input" placeholder="예: rainy night, late study…">
+    </div>
+    <div id="modal-btns">
+      <button class="mbtn" id="folder-modal-cancel">취소</button>
+      <button class="mbtn" id="folder-modal-confirm">만들기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 곡 추가 모달 -->
+<div id="modal-backdrop">
+  <div id="modal">
+    <h2>곡 추가</h2>
+
+    <!-- 오디오 파일 -->
+    <div class="file-zone" id="zone-audio">
+      <div class="fz-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+      </div>
+      <div class="fz-text">
+        <div class="fz-hint">오디오 파일 선택 (mp3, wav)</div>
+        <div class="fz-name" id="audio-name"></div>
+      </div>
+      <input type="file" id="audio-input" accept="audio/*">
+    </div>
+
+    <!-- 커버 이미지 -->
+    <div class="file-zone" id="zone-img">
+      <div class="fz-icon" id="img-icon-wrap">
+        <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+      </div>
+      <img class="img-thumb" id="img-thumb" src="" alt="">
+      <div class="fz-text">
+        <div class="fz-hint">커버 이미지 선택 (jpg, png, gif…)</div>
+        <div class="fz-name" id="img-name"></div>
+      </div>
+      <input type="file" id="img-input" accept="image/*">
+    </div>
+
+    <!-- 폴더 선택 -->
+    <div class="field">
+      <label>폴더</label>
+      <select id="folder-select" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px 13px;font-family:'DM Sans',sans-serif;font-size:14px;color:rgba(255,255,255,0.85);outline:none;width:100%;cursor:none;appearance:none;-webkit-appearance:none;">
+        <option value="">폴더 선택</option>
+      </select>
+    </div>
+
+    <!-- 곡 제목 -->
+    <div class="field">
+      <label>곡 제목</label>
+      <input type="text" id="title-input" placeholder="제목을 입력하세요">
+    </div>
+
+    <div id="modal-btns">
+      <button class="mbtn" id="modal-cancel">취소</button>
+      <button class="mbtn" id="modal-confirm" disabled>추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- 곡 편집 모달 -->
+<div id="edit-backdrop" style="position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s ease;">
+  <div id="edit-modal" style="width:360px;border-radius:18px;background:rgba(14,14,14,0.96);border:1px solid rgba(255,255,255,0.1);padding:28px 26px 24px;display:flex;flex-direction:column;gap:18px;transform:translateY(10px);transition:transform .25s ease;">
+    <h2 style="font-size:15px;font-weight:500;color:rgba(255,255,255,0.82);letter-spacing:-.01em;">곡 편집</h2>
+
+    <!-- 이미지 변경 -->
+    <div class="file-zone" id="edit-zone-img">
+      <div class="fz-icon" id="edit-img-icon">
+        <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+      </div>
+      <img class="img-thumb" id="edit-img-thumb" src="" alt="" style="display:none;">
+      <div class="fz-text">
+        <div class="fz-hint">커버 이미지 변경 (선택 안 하면 유지)</div>
+        <div class="fz-name" id="edit-img-name" style="display:none;"></div>
+      </div>
+      <input type="file" id="edit-img-input" accept="image/*">
+    </div>
+
+    <!-- 제목 -->
+    <div class="field">
+      <label>곡 제목</label>
+      <input type="text" id="edit-title-input" placeholder="제목을 입력하세요">
+    </div>
+
+    <div id="modal-btns">
+      <button class="mbtn" id="edit-cancel">취소</button>
+      <button class="mbtn" id="edit-confirm">저장</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ── SUPABASE ──────────────────────────────────────────
+const SUPABASE_URL = 'https://frvmsufiugdntcvgbmdo.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_pxUZ1XGssw8H331vlk7QVg_0cPQmT-w';
+const ADMIN_PW     = '!$911311pq!$';
+const BUCKET       = 'lofi-files';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── ADMIN STATE ───────────────────────────────────────
+let isAdmin = false;
+
+function setAdminMode(on) {
+  isAdmin = on;
+  document.body.classList.toggle('admin', on);
+  document.getElementById('admin-btn').textContent = on ? '🔓 관리자' : '🔒';
+  sessionStorage.setItem('lofi_admin', on ? '1' : '');
+}
+
+// ── STATE ────────────────────────────────────────────
+let folders = [], allTracks = [], tracks = [];
+let currentFolderId = null, currentIndex = -1;
+let isPlaying = false, idleTimer = null;
+let isShuffle = false, shuffleOrder = [];
+
+const audio      = document.getElementById('audio');
+const bgImg      = document.getElementById('bg-img');
+const bgHolder   = document.getElementById('bg-placeholder');
+const songEl     = document.getElementById('song-title');
+const artistEl   = document.getElementById('artist-el');
+const playIcon   = document.getElementById('play-icon');
+const progFill   = document.getElementById('prog-fill');
+const progThumb  = document.getElementById('prog-thumb');
+const tCur       = document.getElementById('t-cur');
+const tTot       = document.getElementById('t-tot');
+const xfade      = document.getElementById('xfade');
+const cursor     = document.getElementById('cursor');
+const playlist   = document.getElementById('playlist');
+const folderView = document.getElementById('folder-view');
+const trackViewWrap = document.getElementById('track-view-wrap');
+
+// ── CURSOR ───────────────────────────────────────────
+document.addEventListener('mousemove', e => {
+  cursor.style.left = e.clientX + 'px';
+  cursor.style.top  = e.clientY + 'px';
+  cursor.classList.remove('hidden');
+  showUI();
+});
+function setHover(sel) {
+  document.querySelectorAll(sel).forEach(el => {
+    el.addEventListener('mouseenter', () => cursor.classList.add('hover'));
+    el.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
+  });
+}
+setHover('.cbtn,#sb-toggle,#add-btn,#add-folder-btn,#shuffle-btn,#back-btn,.track-item,.track-del,.track-edit,.folder-card,.folder-del,.mbtn,.file-zone,input[type=range],#prog-track,#admin-btn');
+
+function showUI() {
+  document.body.classList.add('ui-visible');
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => {
+    document.body.classList.remove('ui-visible');
+    cursor.classList.add('hidden');
+  }, 3000);
+}
+
+// ── UTILS ────────────────────────────────────────────
+const fmt = s => (!s || isNaN(s)) ? '0:00' : `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+
+function tracksInFolder(fid) { return allTracks.filter(t => t.folder_id === fid); }
+
+async function uploadFile(file, path) {
+  const { data, error } = await sb.storage.from(BUCKET).upload(path, file, { upsert: true });
+  if (error) throw error;
+  const { data: { publicUrl } } = sb.storage.from(BUCKET).getPublicUrl(path);
+  return publicUrl;
+}
+
+function readFile(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.onerror = () => rej(r.error);
+    r.readAsArrayBuffer(file);
+  });
+}
+
+// ── FOLDER VIEW ──────────────────────────────────────
+function renderFolders() {
+  document.getElementById('folder-count').textContent = `${folders.length} folder${folders.length !== 1 ? 's' : ''}`;
+  folderView.innerHTML = '';
+
+  if (!folders.length) {
+    folderView.innerHTML = `<div class="empty-state"><svg width="38" height="38" viewBox="0 0 24 24" fill="white" opacity="0.1"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg><p>폴더가 없어요${isAdmin ? '<br>폴더 추가 버튼으로<br>시작해보세요' : ''}</p></div>`;
+    return;
+  }
+
+  folders.forEach(f => {
+    const fTracks = tracksInFolder(f.id);
+    const firstImg = fTracks.map(t => t.img_url).find(u => u);
+    const isActive = fTracks.some(t => t.id === (tracks[currentIndex] || {}).id);
+
+    const div = document.createElement('div');
+    div.className = 'folder-card' + (isActive ? ' playing' : '');
+    div.innerHTML = `
+      ${firstImg ? `<div class="folder-bg" style="background-image:url('${firstImg}')"></div>` : '<div class="folder-bg-empty"></div>'}
+      <div class="folder-grad"></div>
+      <div class="folder-label">
+        <div class="folder-name">${f.name}</div>
+        <div class="folder-meta">${fTracks.length} track${fTracks.length !== 1 ? 's' : ''}</div>
+      </div>
+      ${isAdmin ? `<button class="folder-del"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>` : ''}`;
+
+    div.addEventListener('click', e => { if (!e.target.closest('.folder-del')) openFolderTracks(f); });
+    if (isAdmin) {
+      div.querySelector('.folder-del').addEventListener('click', async e => {
+        e.stopPropagation();
+        if (!confirm(`"${f.name}" 폴더와 모든 곡을 삭제할까요?`)) return;
+        await sb.from('tracks').delete().eq('folder_id', f.id);
+        await sb.from('folders').delete().eq('id', f.id);
+        folders = folders.filter(x => x.id !== f.id);
+        allTracks = allTracks.filter(t => t.folder_id !== f.id);
+        renderFolders();
+      });
+    }
+    folderView.appendChild(div);
+  });
+  setTimeout(() => setHover('.folder-card,.folder-del'), 40);
+}
+
+// ── TRACK VIEW ────────────────────────────────────────
+function openFolderTracks(f) {
+  currentFolderId = f.id;
+  tracks = tracksInFolder(f.id);
+  document.getElementById('track-view-folder-name').textContent = f.name;
+  folderView.style.display = 'none';
+  document.getElementById('sb-head').style.display = 'none';
+  trackViewWrap.style.display = 'flex';
+  // 관리자일 때만 곡 추가 버튼 표시
+  document.getElementById('add-btn').style.display = isAdmin ? 'flex' : 'none';
+  renderTracks();
+}
+
+function closeFolderTracks() {
+  currentFolderId = null;
+  folderView.style.display = 'flex';
+  document.getElementById('sb-head').style.display = 'flex';
+  trackViewWrap.style.display = 'none';
+  renderFolders();
+}
+
+document.getElementById('back-btn').addEventListener('click', closeFolderTracks);
+
+// ── TRACK RENDER ─────────────────────────────────────
+function renderTracks() {
+  playlist.innerHTML = '';
+  if (!tracks.length) {
+    playlist.innerHTML = `<div class="empty-state"><svg width="38" height="38" viewBox="0 0 24 24" fill="white"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg><p>아직 곡이 없어요${isAdmin ? '<br>곡 추가 버튼을<br>눌러 시작해보세요' : ''}</p></div>`;
+    return;
+  }
+
+  tracks.forEach((t, i) => {
+    const div = document.createElement('div');
+    div.className = 'track-item' + (i === currentIndex ? ' active' : '');
+    div.innerHTML = `
+      ${t.img_url ? `<div class="track-bg" style="background-image:url('${t.img_url}')"></div>` : '<div class="track-bg-empty"></div>'}
+      <div class="track-label">
+        <div class="track-title">${t.title}</div>
+        ${t.artist ? `<div class="track-artist">${t.artist}</div>` : ''}
+      </div>
+      <div class="track-dot"></div>
+      ${isAdmin ? `
+        <button class="track-edit" title="편집"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+        <button class="track-del" title="삭제"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>` : ''}`;
+
+    div.addEventListener('click', e => {
+      if (isAdmin && (e.target.closest('.track-del') || e.target.closest('.track-edit'))) return;
+      loadTrack(i, true);
+    });
+    if (isAdmin) {
+      div.querySelector('.track-del').addEventListener('click', async e => { e.stopPropagation(); await removeTrack(i); });
+      div.querySelector('.track-edit').addEventListener('click', e => { e.stopPropagation(); openEditModal(i); });
+    }
+    playlist.appendChild(div);
+  });
+  setTimeout(() => setHover('.track-item,.track-del,.track-edit'), 40);
+}
+
+// ── LOAD TRACK ───────────────────────────────────────
+const cdWrap  = document.getElementById('cd-wrap');
+const cdImg   = document.getElementById('cd-img');
+const cdEmpty = document.getElementById('cd-empty');
+
+function loadTrack(i, autoplay = true) {
+  if (!tracks.length) return;
+  currentIndex = i;
+  const t = tracks[i];
+  xfade.classList.add('on');
+  setTimeout(() => {
+    if (t.audio_url) { audio.src = t.audio_url; if (autoplay) audio.play().catch(() => {}); }
+    if (t.img_url) {
+      bgImg.src = t.img_url; bgImg.classList.remove('hidden'); bgHolder.style.display = 'none';
+      cdImg.src = t.img_url; cdImg.style.display = 'block'; cdEmpty.style.display = 'none';
+      cdWrap.classList.add('visible');
+    } else {
+      bgImg.classList.add('hidden'); bgHolder.style.display = 'flex';
+      cdImg.style.display = 'none'; cdEmpty.style.display = 'block';
+      cdWrap.classList.add('visible');
+    }
+    songEl.textContent   = t.title;
+    artistEl.textContent = t.artist || '—';
+    renderTracks();
+    renderFolders();
+    xfade.classList.remove('on');
+  }, 340);
+}
+
+// ── PLAY/PAUSE ───────────────────────────────────────
+function togglePlay() {
+  if (!tracks.length) return;
+  if (audio.paused) audio.play(); else audio.pause();
+}
+function syncBtn() {
+  isPlaying = !audio.paused;
+  playIcon.innerHTML = isPlaying ? '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
+  document.body.classList.toggle('playing', isPlaying);
+}
+audio.addEventListener('play',  syncBtn);
+audio.addEventListener('pause', syncBtn);
+audio.addEventListener('timeupdate', () => {
+  if (!audio.duration) return;
+  const p = audio.currentTime / audio.duration * 100;
+  progFill.style.width = p + '%'; progThumb.style.left = p + '%';
+  tCur.textContent = fmt(audio.currentTime);
+});
+audio.addEventListener('loadedmetadata', () => { tTot.textContent = fmt(audio.duration); });
+audio.addEventListener('ended', () => {
+  if (isShuffle) {
+    const next = shuffleOrder.shift();
+    if (shuffleOrder.length === 0) buildShuffleOrder(next);
+    loadTrack(next, true);
+  } else {
+    loadTrack((currentIndex + 1) % tracks.length, true);
+  }
+});
+
+function buildShuffleOrder(exclude) {
+  shuffleOrder = tracks.map((_, i) => i).filter(i => i !== exclude);
+  for (let i = shuffleOrder.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffleOrder[i], shuffleOrder[j]] = [shuffleOrder[j], shuffleOrder[i]];
+  }
+}
+
+const shuffleBtn = document.getElementById('shuffle-btn');
+shuffleBtn.addEventListener('click', () => {
+  isShuffle = !isShuffle;
+  shuffleBtn.classList.toggle('on', isShuffle);
+  if (isShuffle) buildShuffleOrder(currentIndex);
+});
+
+document.getElementById('prog-track').addEventListener('click', e => {
+  const r = e.currentTarget.getBoundingClientRect();
+  if (audio.duration) audio.currentTime = (e.clientX - r.left) / r.width * audio.duration;
+});
+document.getElementById('btn-play').addEventListener('click', togglePlay);
+document.getElementById('btn-prev').addEventListener('click', () => { if (tracks.length) loadTrack((currentIndex - 1 + tracks.length) % tracks.length, !audio.paused); });
+document.getElementById('btn-next').addEventListener('click', () => { if (tracks.length) loadTrack((currentIndex + 1) % tracks.length, !audio.paused); });
+document.getElementById('vol').addEventListener('input', e => { audio.volume = e.target.value / 100; });
+audio.volume = 0.8;
+
+document.getElementById('sb-toggle').addEventListener('click', () => {
+  document.body.classList.toggle('sb-open');
+  setTimeout(() => setHover('.track-item,.track-del,.track-edit,.folder-card,.folder-del'), 100);
+});
+
+// ── DELETE TRACK ─────────────────────────────────────
+async function removeTrack(i) {
+  const t = tracks[i];
+  const wasPlaying = !audio.paused;
+  await sb.from('tracks').delete().eq('id', t.id);
+  allTracks = allTracks.filter(x => x.id !== t.id);
+  tracks = tracksInFolder(currentFolderId);
+  if (!tracks.length) {
+    currentIndex = -1; audio.pause(); audio.src = '';
+    bgImg.classList.add('hidden'); bgHolder.style.display = 'flex';
+    cdWrap.classList.remove('visible');
+    songEl.textContent = '—'; artistEl.textContent = '—';
+    renderTracks();
+  } else {
+    if (currentIndex >= tracks.length) currentIndex = tracks.length - 1;
+    if (i === currentIndex) loadTrack(currentIndex, wasPlaying); else renderTracks();
+  }
+  renderFolders();
+}
+
+// ── ADMIN LOGIN MODAL ────────────────────────────────
+function openAdminModal() {
+  if (isAdmin) { setAdminMode(false); return; }
+  document.getElementById('admin-modal-backdrop').style.opacity = '1';
+  document.getElementById('admin-modal-backdrop').style.pointerEvents = 'auto';
+  document.getElementById('admin-modal').style.transform = 'translateY(0)';
+  document.getElementById('admin-pw-input').value = '';
+  document.getElementById('admin-pw-error').style.display = 'none';
+  setTimeout(() => document.getElementById('admin-pw-input').focus(), 100);
+}
+function closeAdminModal() {
+  document.getElementById('admin-modal-backdrop').style.opacity = '0';
+  document.getElementById('admin-modal-backdrop').style.pointerEvents = 'none';
+  document.getElementById('admin-modal').style.transform = 'translateY(10px)';
+}
+
+document.getElementById('admin-btn').addEventListener('click', openAdminModal);
+document.getElementById('admin-modal-cancel').addEventListener('click', closeAdminModal);
+document.getElementById('admin-modal-backdrop').addEventListener('click', e => {
+  if (e.target === document.getElementById('admin-modal-backdrop')) closeAdminModal();
+});
+document.getElementById('admin-modal-confirm').addEventListener('click', () => {
+  const pw = document.getElementById('admin-pw-input').value;
+  if (pw === ADMIN_PW) {
+    setAdminMode(true);
+    closeAdminModal();
+    // 관리자 모드 진입 시 UI 갱신
+    if (currentFolderId) {
+      document.getElementById('add-btn').style.display = 'flex';
+      renderTracks();
+    }
+    renderFolders();
+  } else {
+    document.getElementById('admin-pw-error').style.display = 'block';
+  }
+});
+document.getElementById('admin-pw-input').addEventListener('keydown', e => {
+  if (e.code === 'Enter') document.getElementById('admin-modal-confirm').click();
+});
+
+// ── FOLDER MODAL ─────────────────────────────────────
+const folderBackdrop  = document.getElementById('folder-modal-backdrop');
+const folderNameInput = document.getElementById('folder-name-input');
+
+function openFolderModal() {
+  folderNameInput.value = '';
+  folderBackdrop.style.opacity = '1'; folderBackdrop.style.pointerEvents = 'auto';
+  document.getElementById('folder-modal').style.transform = 'translateY(0)';
+  setTimeout(() => folderNameInput.focus(), 100);
+}
+function closeFolderModal() {
+  folderBackdrop.style.opacity = '0'; folderBackdrop.style.pointerEvents = 'none';
+  document.getElementById('folder-modal').style.transform = 'translateY(10px)';
+}
+
+document.getElementById('add-folder-btn').addEventListener('click', openFolderModal);
+document.getElementById('folder-modal-cancel').addEventListener('click', closeFolderModal);
+folderBackdrop.addEventListener('click', e => { if (e.target === folderBackdrop) closeFolderModal(); });
+
+document.getElementById('folder-modal-confirm').addEventListener('click', async () => {
+  const name = folderNameInput.value.trim(); if (!name) return;
+  const { data, error } = await sb.from('folders').insert({ name }).select().single();
+  if (error) { alert('폴더 생성 실패: ' + error.message); return; }
+  folders.push(data);
+  renderFolders();
+  closeFolderModal();
+});
+
+// ── ADD TRACK MODAL ───────────────────────────────────
+const backdrop    = document.getElementById('modal-backdrop');
+const titleInput  = document.getElementById('title-input');
+const audioInput  = document.getElementById('audio-input');
+const imgInput    = document.getElementById('img-input');
+const confirmBtn  = document.getElementById('modal-confirm');
+const audioName   = document.getElementById('audio-name');
+const imgName     = document.getElementById('img-name');
+const imgThumb    = document.getElementById('img-thumb');
+const imgIconWrap = document.getElementById('img-icon-wrap');
+const folderSelect= document.getElementById('folder-select');
+
+let pendingAudioFile = null, pendingImgFile = null, thumbURL = null;
+
+function refreshFolderSelect() {
+  folderSelect.innerHTML = '<option value="">폴더 선택</option>';
+  folders.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f.id; opt.textContent = f.name;
+    if (f.id === currentFolderId) opt.selected = true;
+    folderSelect.appendChild(opt);
+  });
+}
+
+function openModal() {
+  pendingAudioFile = pendingImgFile = null;
+  titleInput.value = '';
+  audioName.style.display = 'none'; audioName.textContent = '';
+  imgName.style.display = 'none';   imgName.textContent = '';
+  imgThumb.style.display = 'none';  imgThumb.src = '';
+  imgIconWrap.style.display = 'flex';
+  document.getElementById('zone-audio').classList.remove('filled');
+  document.getElementById('zone-img').classList.remove('filled');
+  if (thumbURL) { URL.revokeObjectURL(thumbURL); thumbURL = null; }
+  audioInput.value = ''; imgInput.value = '';
+  confirmBtn.disabled = true;
+  refreshFolderSelect();
+  backdrop.classList.add('open');
+}
+function closeModal() { backdrop.classList.remove('open'); }
+function checkReady() { confirmBtn.disabled = !(pendingAudioFile && titleInput.value.trim() && folderSelect.value); }
+
+audioInput.addEventListener('change', () => {
+  const f = audioInput.files[0]; if (!f) return;
+  pendingAudioFile = f;
+  audioName.textContent = f.name; audioName.style.display = 'block';
+  document.getElementById('zone-audio').classList.add('filled');
+  if (!titleInput.value.trim())
+    titleInput.value = f.name.replace(/\.(mp3|wav|flac|ogg|m4a|aac)$/i, '').replace(/[-_]/g, ' ');
+  checkReady();
+});
+
+imgInput.addEventListener('change', () => {
+  const f = imgInput.files[0]; if (!f) return;
+  pendingImgFile = f;
+  imgName.textContent = f.name; imgName.style.display = 'block';
+  document.getElementById('zone-img').classList.add('filled');
+  if (thumbURL) URL.revokeObjectURL(thumbURL);
+  thumbURL = URL.createObjectURL(f);
+  imgThumb.src = thumbURL; imgThumb.style.display = 'block';
+  imgIconWrap.style.display = 'none';
+  checkReady();
+});
+
+titleInput.addEventListener('input', checkReady);
+folderSelect.addEventListener('change', checkReady);
+
+document.getElementById('add-btn').addEventListener('click', openModal);
+document.getElementById('modal-cancel').addEventListener('click', closeModal);
+backdrop.addEventListener('click', e => { if (e.target === backdrop) closeModal(); });
+
+confirmBtn.addEventListener('click', async () => {
+  if (!pendingAudioFile || !titleInput.value.trim() || !folderSelect.value) return;
+  confirmBtn.disabled = true;
+  confirmBtn.textContent = '업로드 중…';
+
+  try {
+    const ts = Date.now();
+    const audioPath = `audio/${ts}_${pendingAudioFile.name}`;
+    const audioUrl  = await uploadFile(pendingAudioFile, audioPath);
+
+    let imgUrl = null;
+    if (pendingImgFile) {
+      const imgPath = `img/${ts}_${pendingImgFile.name}`;
+      imgUrl = await uploadFile(pendingImgFile, imgPath);
+    }
+
+    const { data, error } = await sb.from('tracks').insert({
+      title: titleInput.value.trim(),
+      artist: '',
+      folder_id: Number(folderSelect.value),
+      audio_url: audioUrl,
+      img_url: imgUrl,
+    }).select().single();
+
+    if (error) throw error;
+
+    allTracks.push(data);
+    if (currentFolderId === data.folder_id) {
+      tracks = tracksInFolder(currentFolderId);
+      if (tracks.length === 1) loadTrack(0, false);
+      else renderTracks();
+    }
+    renderFolders();
+    closeModal();
+  } catch (err) {
+    alert('업로드 실패: ' + err.message);
+  } finally {
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = '추가';
+  }
+});
+
+// ── EDIT MODAL ────────────────────────────────────────
+const editBackdrop   = document.getElementById('edit-backdrop');
+const editTitleInput = document.getElementById('edit-title-input');
+const editImgInput   = document.getElementById('edit-img-input');
+const editImgThumb   = document.getElementById('edit-img-thumb');
+const editImgIcon    = document.getElementById('edit-img-icon');
+const editImgName    = document.getElementById('edit-img-name');
+let editingIndex = -1, editPendingImgFile = null, editThumbURL = null;
+
+function openEditModal(i) {
+  editingIndex = i;
+  editPendingImgFile = null;
+  const t = tracks[i];
+  editTitleInput.value = t.title;
+  editImgInput.value = '';
+  editImgName.style.display = 'none'; editImgName.textContent = '';
+  if (t.img_url) { editImgThumb.src = t.img_url; editImgThumb.style.display = 'block'; editImgIcon.style.display = 'none'; }
+  else           { editImgThumb.style.display = 'none'; editImgThumb.src = ''; editImgIcon.style.display = 'flex'; }
+  document.getElementById('edit-zone-img').classList.toggle('filled', !!t.img_url);
+  editBackdrop.style.opacity = '1'; editBackdrop.style.pointerEvents = 'auto';
+  document.getElementById('edit-modal').style.transform = 'translateY(0)';
+}
+function closeEditModal() {
+  editBackdrop.style.opacity = '0'; editBackdrop.style.pointerEvents = 'none';
+  document.getElementById('edit-modal').style.transform = 'translateY(10px)';
+  if (editThumbURL) { URL.revokeObjectURL(editThumbURL); editThumbURL = null; }
+}
+editImgInput.addEventListener('change', () => {
+  const f = editImgInput.files[0]; if (!f) return;
+  editPendingImgFile = f;
+  editImgName.textContent = f.name; editImgName.style.display = 'block';
+  document.getElementById('edit-zone-img').classList.add('filled');
+  if (editThumbURL) URL.revokeObjectURL(editThumbURL);
+  editThumbURL = URL.createObjectURL(f);
+  editImgThumb.src = editThumbURL; editImgThumb.style.display = 'block';
+  editImgIcon.style.display = 'none';
+});
+document.getElementById('edit-cancel').addEventListener('click', closeEditModal);
+editBackdrop.addEventListener('click', e => { if (e.target === editBackdrop) closeEditModal(); });
+document.getElementById('edit-confirm').addEventListener('click', async () => {
+  if (editingIndex < 0) return;
+  const t = tracks[editingIndex];
+  const updates = { title: editTitleInput.value.trim() || t.title };
+
+  if (editPendingImgFile) {
+    const ts = Date.now();
+    const imgPath = `img/${ts}_${editPendingImgFile.name}`;
+    updates.img_url = await uploadFile(editPendingImgFile, imgPath);
+  }
+
+  const { error } = await sb.from('tracks').update(updates).eq('id', t.id);
+  if (error) { alert('수정 실패: ' + error.message); return; }
+
+  Object.assign(t, updates);
+  const at = allTracks.find(x => x.id === t.id);
+  if (at) Object.assign(at, updates);
+
+  if (editingIndex === currentIndex) {
+    songEl.textContent = t.title;
+    if (updates.img_url) { bgImg.src = updates.img_url; cdImg.src = updates.img_url; }
+  }
+  renderTracks(); renderFolders();
+  closeEditModal();
+});
+
+// ── AMBIENT SOUND ENGINE ─────────────────────────────
+const ambCtx = new (window.AudioContext || window.webkitAudioContext)();
+const ambNodes = {};
+function makeNoise(type) {
+  const buf = ambCtx.createBuffer(1, ambCtx.sampleRate * 4, ambCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  const src = ambCtx.createBufferSource(); src.buffer = buf; src.loop = true;
+  const gain = ambCtx.createGain(); gain.gain.value = 0;
+  if (type === 'rain') { const hp = ambCtx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=1200; const lp=ambCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=8000; src.connect(hp); hp.connect(lp); lp.connect(gain); }
+  else if (type === 'wind') { const lp=ambCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=600; const lp2=ambCtx.createBiquadFilter(); lp2.type='lowpass'; lp2.frequency.value=400; src.connect(lp); lp.connect(lp2); lp2.connect(gain); }
+  else if (type === 'wave') { const lp=ambCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=800; const lfo=ambCtx.createOscillator(); lfo.frequency.value=0.18; const lg=ambCtx.createGain(); lg.gain.value=0.4; lfo.connect(lg); lg.connect(gain.gain); lfo.start(); src.connect(lp); lp.connect(gain); }
+  else if (type === 'fire') { const lp=ambCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=1000; const hp=ambCtx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=80; src.connect(lp); lp.connect(hp); hp.connect(gain); }
+  else if (type === 'cafe') { const lp=ambCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=3000; const pk=ambCtx.createBiquadFilter(); pk.type='peaking'; pk.frequency.value=500; pk.gain.value=8; src.connect(lp); lp.connect(pk); pk.connect(gain); }
+  else if (type === 'thunder') { const lp=ambCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=300; const lfo=ambCtx.createOscillator(); lfo.frequency.value=0.05; const lg=ambCtx.createGain(); lg.gain.value=0.6; lfo.connect(lg); lg.connect(gain.gain); lfo.start(); src.connect(lp); lp.connect(gain); }
+  else if (type === 'forest') { const hp=ambCtx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=2000; const lp=ambCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=8000; const lfo=ambCtx.createOscillator(); lfo.frequency.value=0.4; const lg=ambCtx.createGain(); lg.gain.value=0.3; lfo.connect(lg); lg.connect(gain.gain); lfo.start(); src.connect(hp); hp.connect(lp); lp.connect(gain); }
+  else { src.connect(gain); }
+  gain.connect(ambCtx.destination); src.start();
+  return { src, gain };
+}
+function ambStart(type) { if (ambCtx.state==='suspended') ambCtx.resume(); if (ambNodes[type]) return; ambNodes[type]=makeNoise(type); }
+function ambStop(type) { if (!ambNodes[type]) return; ambNodes[type].gain.gain.setTargetAtTime(0,ambCtx.currentTime,0.3); setTimeout(()=>{ try{ambNodes[type].src.stop();}catch(e){} delete ambNodes[type]; },800); }
+function ambSetVol(type,vol) { if (!ambNodes[type]) return; ambNodes[type].gain.gain.setTargetAtTime(vol,ambCtx.currentTime,0.1); }
+
+document.getElementById('amb-toggle').addEventListener('click', () => {
+  document.body.classList.toggle('amb-open');
+  setTimeout(() => setHover('.amb-item,.amb-toggle-btn,#amb-stop-all,.amb-vol'), 100);
+});
+document.querySelectorAll('.amb-item').forEach(item => {
+  const type=item.dataset.sound, btn=item.querySelector('.amb-toggle-btn'), vol=item.querySelector('.amb-vol');
+  btn.addEventListener('click', () => { const on=item.classList.toggle('active'); if(on){ambStart(type);ambSetVol(type,vol.value/100*0.6);}else{ambStop(type);} });
+  vol.addEventListener('input', () => { if(item.classList.contains('active')) ambSetVol(type,vol.value/100*0.6); });
+});
+document.getElementById('amb-stop-all').addEventListener('click', () => {
+  document.querySelectorAll('.amb-item.active').forEach(item => { item.classList.remove('active'); ambStop(item.dataset.sound); });
+});
+setHover('#amb-toggle,#amb-stop-all');
+
+// ── CD DRAG GESTURE ──────────────────────────────────
+let dragStartX = null, isDragging = false;
+cdWrap.style.pointerEvents = 'auto';
+cdWrap.addEventListener('mousedown', e => { dragStartX = e.clientX; isDragging = false; });
+cdWrap.addEventListener('mousemove', e => { if (dragStartX !== null && Math.abs(e.clientX - dragStartX) > 8) isDragging = true; });
+cdWrap.addEventListener('mouseup', e => {
+  if (dragStartX === null) return;
+  const diff = e.clientX - dragStartX;
+  if (Math.abs(diff) > 60 && tracks.length) {
+    if (diff < 0) loadTrack((currentIndex + 1) % tracks.length, !audio.paused);
+    else          loadTrack((currentIndex - 1 + tracks.length) % tracks.length, !audio.paused);
+  }
+  dragStartX = null; isDragging = false;
+});
+cdWrap.addEventListener('mouseleave', () => { dragStartX = null; isDragging = false; });
+cdWrap.addEventListener('touchstart', e => { dragStartX = e.touches[0].clientX; }, { passive: true });
+cdWrap.addEventListener('touchend', e => {
+  if (dragStartX === null) return;
+  const diff = e.changedTouches[0].clientX - dragStartX;
+  if (Math.abs(diff) > 60 && tracks.length) {
+    if (diff < 0) loadTrack((currentIndex + 1) % tracks.length, !audio.paused);
+    else          loadTrack((currentIndex - 1 + tracks.length) % tracks.length, !audio.paused);
+  }
+  dragStartX = null;
+});
+
+// ── CURSOR TRAIL ─────────────────────────────────────
+const TRAIL_COUNT = 12;
+const trail = [];
+for (let i = 0; i < TRAIL_COUNT; i++) {
+  const dot = document.createElement('div');
+  const size = Math.max(2, 7 - i * 0.5);
+  dot.style.cssText = `position:fixed;border-radius:50%;pointer-events:none;z-index:9998;width:${size}px;height:${size}px;background:rgba(255,255,255,${0.55-i*0.04});transform:translate(-50%,-50%);transition:opacity .3s ease;`;
+  document.body.appendChild(dot);
+  trail.push({ el: dot, x: 0, y: 0 });
+}
+let mouseX = 0, mouseY = 0;
+document.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+(function animateTrail() {
+  trail.forEach((t, i) => {
+    const prev = i === 0 ? { x: mouseX, y: mouseY } : trail[i-1];
+    t.x += (prev.x - t.x) * (0.35 - i * 0.018);
+    t.y += (prev.y - t.y) * (0.35 - i * 0.018);
+    t.el.style.left = t.x + 'px'; t.el.style.top = t.y + 'px';
+    t.el.style.opacity = document.body.classList.contains('ui-visible') || i < 4 ? '1' : '0';
+  });
+  requestAnimationFrame(animateTrail);
+})();
+
+// ── KEYBOARD ─────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (document.getElementById('admin-modal-backdrop').style.pointerEvents === 'auto') { if (e.code === 'Escape') closeAdminModal(); return; }
+  if (editBackdrop.style.pointerEvents === 'auto') { if (e.code === 'Escape') closeEditModal(); return; }
+  if (folderBackdrop.style.pointerEvents === 'auto') { if (e.code === 'Escape') closeFolderModal(); return; }
+  if (backdrop.classList.contains('open')) { if (e.code === 'Escape') closeModal(); return; }
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.code === 'Space') { e.preventDefault(); togglePlay(); showUI(); }
+  if (e.code === 'ArrowRight') document.getElementById('btn-next').click();
+  if (e.code === 'ArrowLeft')  document.getElementById('btn-prev').click();
+});
+
+// ── INIT ─────────────────────────────────────────────
+(async () => {
+  // 세션 유지
+  if (sessionStorage.getItem('lofi_admin') === '1') setAdminMode(true);
+
+  const [{ data: fData }, { data: tData }] = await Promise.all([
+    sb.from('folders').select('*').order('created_at'),
+    sb.from('tracks').select('*').order('created_at'),
+  ]);
+  folders   = fData  || [];
+  allTracks = tData  || [];
+
+  renderFolders();
+  setTimeout(() => { document.body.classList.remove('ui-visible'); cursor.classList.add('hidden'); }, 2500);
+})();
+</script>
+</body>
+</html>
