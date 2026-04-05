@@ -1525,13 +1525,12 @@ setHover('#amb-toggle,#amb-stop-all,#add-amb-btn');
 // ── AMBIENT ADD MODAL ────────────────────────────────
 const ambBackdrop   = document.getElementById('amb-modal-backdrop');
 const ambNameInput  = document.getElementById('amb-name-input');
-const ambIconInput  = document.getElementById('amb-icon-input');
 const ambAudioInput = document.getElementById('amb-audio-input');
 const ambConfirmBtn = document.getElementById('amb-modal-confirm');
 let pendingAmbFile  = null;
 
 function openAmbModal() {
-  ambNameInput.value = ''; ambIconInput.value = '🎵';
+  ambNameInput.value = '';
   ambAudioInput.value = '';
   document.getElementById('amb-audio-name').style.display = 'none';
   document.getElementById('amb-zone-audio').classList.remove('filled');
