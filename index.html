@@ -214,9 +214,33 @@ body.amb-open #amb-panel { left: 0; }
 #amb-head {
   padding: 26px 18px 14px;
   border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 10px;
 }
-#amb-head .lbl { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: rgba(255,255,255,0.22); }
-#amb-head .title { font-size: 20px; font-weight: 500; color: rgba(255,255,255,0.82); letter-spacing: -.02em; margin-top: 2px; }
+#amb-head .info .lbl { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: rgba(255,255,255,0.22); }
+#amb-head .info .title { font-size: 20px; font-weight: 500; color: rgba(255,255,255,0.82); letter-spacing: -.02em; margin-top: 2px; }
+
+#add-amb-btn {
+  display: none;
+  align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05);
+  font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 400;
+  color: rgba(255,255,255,0.5); cursor: none; white-space: nowrap;
+  transition: border-color .2s, background .2s, color .2s;
+}
+body.admin #add-amb-btn { display: flex; }
+#add-amb-btn:hover { border-color: rgba(255,255,255,0.35); background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8); }
+#add-amb-btn svg { width: 11px; height: 11px; fill: currentColor; flex-shrink: 0; }
+
+.amb-del {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.3);
+  display: none; align-items: center; justify-content: center;
+  cursor: none; flex-shrink: 0; transition: background .15s, border-color .15s;
+}
+body.admin .amb-del { display: flex; }
+.amb-del:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.28); }
+.amb-del svg { width: 8px; height: 8px; fill: rgba(255,255,255,0.5); pointer-events: none; }
 
 #amb-list { flex: 1; overflow-y: auto; padding: 14px 18px; display: flex; flex-direction: column; gap: 6px; scrollbar-width: none; }
 #amb-list::-webkit-scrollbar { display: none; }
@@ -630,69 +654,54 @@ body.admin #add-folder-btn { display: flex; }
 <!-- ambient panel -->
 <div id="amb-panel">
   <div id="amb-head">
-    <div class="lbl">ambient</div>
-    <div class="title">분위기 믹서</div>
+    <div class="info">
+      <div class="lbl">ambient</div>
+      <div class="title">분위기 믹서</div>
+    </div>
+    <button id="add-amb-btn">
+      <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+      추가
+    </button>
   </div>
-  <div id="amb-list">
-    <div class="amb-item" data-sound="rain">
-      <div class="amb-top">
-        <div class="amb-icon">🌧</div>
-        <div class="amb-name">빗소리</div>
-        <div class="amb-toggle-btn"></div>
-      </div>
-      <input type="range" class="amb-vol" min="0" max="100" value="40">
-    </div>
-    <div class="amb-item" data-sound="cafe">
-      <div class="amb-top">
-        <div class="amb-icon">☕</div>
-        <div class="amb-name">카페 소음</div>
-        <div class="amb-toggle-btn"></div>
-      </div>
-      <input type="range" class="amb-vol" min="0" max="100" value="40">
-    </div>
-    <div class="amb-item" data-sound="wind">
-      <div class="amb-top">
-        <div class="amb-icon">🌬</div>
-        <div class="amb-name">바람 소리</div>
-        <div class="amb-toggle-btn"></div>
-      </div>
-      <input type="range" class="amb-vol" min="0" max="100" value="40">
-    </div>
-    <div class="amb-item" data-sound="fire">
-      <div class="amb-top">
-        <div class="amb-icon">🔥</div>
-        <div class="amb-name">모닥불 소리</div>
-        <div class="amb-toggle-btn"></div>
-      </div>
-      <input type="range" class="amb-vol" min="0" max="100" value="40">
-    </div>
-    <div class="amb-item" data-sound="wave">
-      <div class="amb-top">
-        <div class="amb-icon">🌊</div>
-        <div class="amb-name">파도 소리</div>
-        <div class="amb-toggle-btn"></div>
-      </div>
-      <input type="range" class="amb-vol" min="0" max="100" value="40">
-    </div>
-    <div class="amb-item" data-sound="thunder">
-      <div class="amb-top">
-        <div class="amb-icon">⚡</div>
-        <div class="amb-name">천둥 소리</div>
-        <div class="amb-toggle-btn"></div>
-      </div>
-      <input type="range" class="amb-vol" min="0" max="100" value="40">
-    </div>
-    <div class="amb-item" data-sound="forest">
-      <div class="amb-top">
-        <div class="amb-icon">🌿</div>
-        <div class="amb-name">숲 소리</div>
-        <div class="amb-toggle-btn"></div>
-      </div>
-      <input type="range" class="amb-vol" min="0" max="100" value="40">
-    </div>
-  </div>
+  <div id="amb-list"></div>
   <div id="amb-foot">
     <button id="amb-stop-all">모두 끄기</button>
+  </div>
+</div>
+
+<!-- ambient 추가 모달 -->
+<div id="amb-modal-backdrop" style="position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.72);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s ease;">
+  <div id="amb-modal" style="width:340px;border-radius:18px;background:rgba(14,14,14,0.96);border:1px solid rgba(255,255,255,0.1);padding:28px 26px 24px;display:flex;flex-direction:column;gap:18px;transform:translateY(10px);transition:transform .25s ease;">
+    <h2 style="font-size:15px;font-weight:500;color:rgba(255,255,255,0.82);letter-spacing:-.01em;">ambient 추가</h2>
+
+    <!-- 이름 -->
+    <div class="field">
+      <label>이름</label>
+      <input type="text" id="amb-name-input" placeholder="예: 빗소리, 카페 소음…">
+    </div>
+
+    <!-- 이모지 -->
+    <div class="field">
+      <label>아이콘 (이모지)</label>
+      <input type="text" id="amb-icon-input" placeholder="🎵" maxlength="2" style="width:80px;">
+    </div>
+
+    <!-- 오디오 파일 -->
+    <div class="file-zone" id="amb-zone-audio">
+      <div class="fz-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+      </div>
+      <div class="fz-text">
+        <div class="fz-hint">오디오 파일 선택 (mp3, wav)</div>
+        <div class="fz-name" id="amb-audio-name" style="display:none;"></div>
+      </div>
+      <input type="file" id="amb-audio-input" accept="audio/*">
+    </div>
+
+    <div id="modal-btns">
+      <button class="mbtn" id="amb-modal-cancel">취소</button>
+      <button class="mbtn" id="amb-modal-confirm" disabled>추가</button>
+    </div>
   </div>
 </div>
 
@@ -1202,6 +1211,7 @@ document.getElementById('admin-modal-confirm').addEventListener('click', async (
       renderTracks();
     }
     renderFolders();
+    renderAmbient();
   } else {
     document.getElementById('admin-pw-error').style.display = 'block';
   }
@@ -1418,41 +1428,170 @@ document.getElementById('edit-confirm').addEventListener('click', async () => {
 
 // ── AMBIENT SOUND ENGINE ─────────────────────────────
 const ambCtx = new (window.AudioContext || window.webkitAudioContext)();
-const ambNodes = {};
-function makeNoise(type) {
-  const buf = ambCtx.createBuffer(1, ambCtx.sampleRate * 4, ambCtx.sampleRate);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-  const src = ambCtx.createBufferSource(); src.buffer = buf; src.loop = true;
-  const gain = ambCtx.createGain(); gain.gain.value = 0;
-  if (type === 'rain') { const hp = ambCtx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=1200; const lp=ambCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=8000; src.connect(hp); hp.connect(lp); lp.connect(gain); }
-  else if (type === 'wind') { const lp=ambCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=600; const lp2=ambCtx.createBiquadFilter(); lp2.type='lowpass'; lp2.frequency.value=400; src.connect(lp); lp.connect(lp2); lp2.connect(gain); }
-  else if (type === 'wave') { const lp=ambCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=800; const lfo=ambCtx.createOscillator(); lfo.frequency.value=0.18; const lg=ambCtx.createGain(); lg.gain.value=0.4; lfo.connect(lg); lg.connect(gain.gain); lfo.start(); src.connect(lp); lp.connect(gain); }
-  else if (type === 'fire') { const lp=ambCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=1000; const hp=ambCtx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=80; src.connect(lp); lp.connect(hp); hp.connect(gain); }
-  else if (type === 'cafe') { const lp=ambCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=3000; const pk=ambCtx.createBiquadFilter(); pk.type='peaking'; pk.frequency.value=500; pk.gain.value=8; src.connect(lp); lp.connect(pk); pk.connect(gain); }
-  else if (type === 'thunder') { const lp=ambCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=300; const lfo=ambCtx.createOscillator(); lfo.frequency.value=0.05; const lg=ambCtx.createGain(); lg.gain.value=0.6; lfo.connect(lg); lg.connect(gain.gain); lfo.start(); src.connect(lp); lp.connect(gain); }
-  else if (type === 'forest') { const hp=ambCtx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=2000; const lp=ambCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=8000; const lfo=ambCtx.createOscillator(); lfo.frequency.value=0.4; const lg=ambCtx.createGain(); lg.gain.value=0.3; lfo.connect(lg); lg.connect(gain.gain); lfo.start(); src.connect(hp); hp.connect(lp); lp.connect(gain); }
-  else { src.connect(gain); }
-  gain.connect(ambCtx.destination); src.start();
-  return { src, gain };
-}
-function ambStart(type) { if (ambCtx.state==='suspended') ambCtx.resume(); if (ambNodes[type]) return; ambNodes[type]=makeNoise(type); }
-function ambStop(type) { if (!ambNodes[type]) return; ambNodes[type].gain.gain.setTargetAtTime(0,ambCtx.currentTime,0.3); setTimeout(()=>{ try{ambNodes[type].src.stop();}catch(e){} delete ambNodes[type]; },800); }
-function ambSetVol(type,vol) { if (!ambNodes[type]) return; ambNodes[type].gain.gain.setTargetAtTime(vol,ambCtx.currentTime,0.1); }
+const ambNodes = {}; // id → { src, gain, el }
+let ambientList = []; // Supabase에서 불러온 목록
 
+function makeAmbientFromURL(url) {
+  return new Promise(res => {
+    const audioEl = new Audio(url);
+    audioEl.loop = true; audioEl.crossOrigin = 'anonymous';
+    const src  = ambCtx.createMediaElementSource(audioEl);
+    const gain = ambCtx.createGain(); gain.gain.value = 0;
+    src.connect(gain); gain.connect(ambCtx.destination);
+    res({ el: audioEl, gain });
+  });
+}
+
+async function ambStart(id, url) {
+  if (ambCtx.state === 'suspended') ambCtx.resume();
+  if (ambNodes[id]) return;
+  const node = await makeAmbientFromURL(url);
+  node.el.play().catch(() => {});
+  ambNodes[id] = node;
+}
+
+function ambStop(id) {
+  if (!ambNodes[id]) return;
+  ambNodes[id].gain.gain.setTargetAtTime(0, ambCtx.currentTime, 0.3);
+  setTimeout(() => {
+    try { ambNodes[id].el.pause(); } catch(e) {}
+    delete ambNodes[id];
+  }, 800);
+}
+
+function ambSetVol(id, vol) {
+  if (!ambNodes[id]) return;
+  ambNodes[id].gain.gain.setTargetAtTime(vol, ambCtx.currentTime, 0.1);
+}
+
+// ── AMBIENT RENDER ───────────────────────────────────
+function renderAmbient() {
+  const list = document.getElementById('amb-list');
+  list.innerHTML = '';
+
+  if (!ambientList.length) {
+    list.innerHTML = `<div class="empty-state" style="height:200px;"><p style="font-size:13px;color:rgba(255,255,255,0.2);text-align:center;line-height:1.7;">${isAdmin ? '추가 버튼으로<br>ambient를 추가해보세요' : '등록된 ambient가 없어요'}</p></div>`;
+    return;
+  }
+
+  ambientList.forEach(a => {
+    const item = document.createElement('div');
+    item.className = 'amb-item';
+    item.dataset.id = a.id;
+    item.innerHTML = `
+      <div class="amb-top">
+        <div class="amb-icon">${a.icon || '🎵'}</div>
+        <div class="amb-name">${a.name}</div>
+        <div class="amb-toggle-btn"></div>
+        <button class="amb-del"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+      </div>
+      <input type="range" class="amb-vol" min="0" max="100" value="40">`;
+
+    const btn = item.querySelector('.amb-toggle-btn');
+    const vol = item.querySelector('.amb-vol');
+    const del = item.querySelector('.amb-del');
+
+    btn.addEventListener('click', async () => {
+      const on = item.classList.toggle('active');
+      if (on) { await ambStart(a.id, a.audio_url); ambSetVol(a.id, vol.value / 100 * 0.6); }
+      else    { ambStop(a.id); }
+    });
+
+    vol.addEventListener('input', () => {
+      if (item.classList.contains('active')) ambSetVol(a.id, vol.value / 100 * 0.6);
+    });
+
+    del.addEventListener('click', async () => {
+      if (!confirm(`"${a.name}" 을 삭제할까요?`)) return;
+      ambStop(a.id);
+      await sb.from('ambient').delete().eq('id', a.id);
+      ambientList = ambientList.filter(x => x.id !== a.id);
+      renderAmbient();
+    });
+
+    list.appendChild(item);
+  });
+
+  setTimeout(() => setHover('.amb-item,.amb-toggle-btn,.amb-del,.amb-vol'), 40);
+}
+
+// ── AMBIENT PANEL UI ─────────────────────────────────
 document.getElementById('amb-toggle').addEventListener('click', () => {
   document.body.classList.toggle('amb-open');
-  setTimeout(() => setHover('.amb-item,.amb-toggle-btn,#amb-stop-all,.amb-vol'), 100);
+  setTimeout(() => setHover('.amb-item,.amb-toggle-btn,.amb-del,#amb-stop-all,.amb-vol,#add-amb-btn'), 100);
 });
-document.querySelectorAll('.amb-item').forEach(item => {
-  const type=item.dataset.sound, btn=item.querySelector('.amb-toggle-btn'), vol=item.querySelector('.amb-vol');
-  btn.addEventListener('click', () => { const on=item.classList.toggle('active'); if(on){ambStart(type);ambSetVol(type,vol.value/100*0.6);}else{ambStop(type);} });
-  vol.addEventListener('input', () => { if(item.classList.contains('active')) ambSetVol(type,vol.value/100*0.6); });
-});
+
 document.getElementById('amb-stop-all').addEventListener('click', () => {
-  document.querySelectorAll('.amb-item.active').forEach(item => { item.classList.remove('active'); ambStop(item.dataset.sound); });
+  document.querySelectorAll('.amb-item.active').forEach(item => {
+    item.classList.remove('active');
+    ambStop(item.dataset.id);
+  });
 });
-setHover('#amb-toggle,#amb-stop-all');
+setHover('#amb-toggle,#amb-stop-all,#add-amb-btn');
+
+// ── AMBIENT ADD MODAL ────────────────────────────────
+const ambBackdrop   = document.getElementById('amb-modal-backdrop');
+const ambNameInput  = document.getElementById('amb-name-input');
+const ambIconInput  = document.getElementById('amb-icon-input');
+const ambAudioInput = document.getElementById('amb-audio-input');
+const ambConfirmBtn = document.getElementById('amb-modal-confirm');
+let pendingAmbFile  = null;
+
+function openAmbModal() {
+  ambNameInput.value = ''; ambIconInput.value = '🎵';
+  ambAudioInput.value = '';
+  document.getElementById('amb-audio-name').style.display = 'none';
+  document.getElementById('amb-zone-audio').classList.remove('filled');
+  pendingAmbFile = null;
+  ambConfirmBtn.disabled = true;
+  ambBackdrop.style.opacity = '1'; ambBackdrop.style.pointerEvents = 'auto';
+  document.getElementById('amb-modal').style.transform = 'translateY(0)';
+  setTimeout(() => ambNameInput.focus(), 100);
+}
+function closeAmbModal() {
+  ambBackdrop.style.opacity = '0'; ambBackdrop.style.pointerEvents = 'none';
+  document.getElementById('amb-modal').style.transform = 'translateY(10px)';
+}
+function checkAmbReady() { ambConfirmBtn.disabled = !(ambNameInput.value.trim() && pendingAmbFile); }
+
+document.getElementById('add-amb-btn').addEventListener('click', openAmbModal);
+document.getElementById('amb-modal-cancel').addEventListener('click', closeAmbModal);
+ambBackdrop.addEventListener('click', e => { if (e.target === ambBackdrop) closeAmbModal(); });
+ambNameInput.addEventListener('input', checkAmbReady);
+
+ambAudioInput.addEventListener('change', () => {
+  const f = ambAudioInput.files[0]; if (!f) return;
+  pendingAmbFile = f;
+  const nameEl = document.getElementById('amb-audio-name');
+  nameEl.textContent = f.name; nameEl.style.display = 'block';
+  document.getElementById('amb-zone-audio').classList.add('filled');
+  checkAmbReady();
+});
+
+ambConfirmBtn.addEventListener('click', async () => {
+  if (!pendingAmbFile || !ambNameInput.value.trim()) return;
+  ambConfirmBtn.disabled = true;
+  ambConfirmBtn.textContent = '업로드 중…';
+  try {
+    const ts = Date.now();
+    const path = `ambient/${ts}_${pendingAmbFile.name}`;
+    const audioUrl = await uploadFile(pendingAmbFile, path);
+    const { data, error } = await sb.from('ambient').insert({
+      name: ambNameInput.value.trim(),
+      icon: ambIconInput.value.trim() || '🎵',
+      audio_url: audioUrl,
+    }).select().single();
+    if (error) throw error;
+    ambientList.push(data);
+    renderAmbient();
+    closeAmbModal();
+  } catch (err) {
+    alert('업로드 실패: ' + err.message);
+  } finally {
+    ambConfirmBtn.disabled = false;
+    ambConfirmBtn.textContent = '추가';
+  }
+});
 
 // ── CD DRAG GESTURE ──────────────────────────────────
 let dragStartX = null, isDragging = false;
@@ -1506,6 +1645,7 @@ document.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.cli
 // ── KEYBOARD ─────────────────────────────────────────
 document.addEventListener('keydown', e => {
   if (document.getElementById('admin-modal-backdrop').style.pointerEvents === 'auto') { if (e.code === 'Escape') closeAdminModal(); return; }
+  if (ambBackdrop.style.pointerEvents === 'auto') { if (e.code === 'Escape') closeAmbModal(); return; }
   if (editBackdrop.style.pointerEvents === 'auto') { if (e.code === 'Escape') closeEditModal(); return; }
   if (folderBackdrop.style.pointerEvents === 'auto') { if (e.code === 'Escape') closeFolderModal(); return; }
   if (backdrop.classList.contains('open')) { if (e.code === 'Escape') closeModal(); return; }
@@ -1520,14 +1660,17 @@ document.addEventListener('keydown', e => {
   // 세션 유지
   if (sessionStorage.getItem('lofi_admin') === '1') setAdminMode(true);
 
-  const [{ data: fData }, { data: tData }] = await Promise.all([
+  const [{ data: fData }, { data: tData }, { data: aData }] = await Promise.all([
     sb.from('folders').select('*').order('created_at'),
     sb.from('tracks').select('*').order('created_at'),
+    sb.from('ambient').select('*').order('created_at'),
   ]);
-  folders   = fData  || [];
-  allTracks = tData  || [];
+  folders     = fData || [];
+  allTracks   = tData || [];
+  ambientList = aData || [];
 
   renderFolders();
+  renderAmbient();
   setTimeout(() => { document.body.classList.remove('ui-visible'); cursor.classList.add('hidden'); }, 2500);
 })();
 </script>
