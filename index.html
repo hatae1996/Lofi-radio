@@ -519,7 +519,8 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 10p
 /* 텍스트 필드 */
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label { font-size: 10px; font-weight: 400; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,0.28); }
-.field input[type="text"] {
+.field input[type="text"],
+.field input[type="password"] {
   background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
   border-radius: 8px; padding: 10px 13px;
   font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 400;
@@ -755,13 +756,13 @@ body.admin #add-folder-btn { display: flex; }
 
 <!-- 관리자 로그인 모달 -->
 <div id="admin-modal-backdrop" style="position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.72);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s ease;">
-  <div id="admin-modal" style="width:300px;border-radius:18px;background:rgba(14,14,14,0.96);border:1px solid rgba(255,255,255,0.1);padding:28px 26px 24px;display:flex;flex-direction:column;gap:16px;transform:translateY(10px);transition:transform .25s ease;">
-    <h2 style="font-size:15px;font-weight:500;color:rgba(255,255,255,0.82);">관리자 로그인</h2>
+  <div id="admin-modal" style="width:320px;border-radius:18px;background:rgba(14,14,14,0.96);border:1px solid rgba(255,255,255,0.1);padding:28px 26px 24px;display:flex;flex-direction:column;gap:18px;transform:translateY(10px);transition:transform .25s ease;">
+    <h2 style="font-size:15px;font-weight:500;color:rgba(255,255,255,0.82);letter-spacing:-.01em;">관리자 로그인</h2>
     <div class="field">
       <label>비밀번호</label>
       <input type="password" id="admin-pw-input" placeholder="비밀번호 입력">
     </div>
-    <p id="admin-pw-error" style="display:none;font-size:12px;color:rgba(255,80,80,0.8);margin-top:-8px;">비밀번호가 틀렸어요</p>
+    <p id="admin-pw-error" style="display:none;font-size:12px;color:rgba(255,80,80,0.7);margin-top:-10px;">비밀번호가 틀렸어요</p>
     <div id="modal-btns">
       <button class="mbtn" id="admin-modal-cancel">취소</button>
       <button class="mbtn" id="admin-modal-confirm">로그인</button>
