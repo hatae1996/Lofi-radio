@@ -873,10 +873,15 @@ body.admin #add-folder-btn { display: flex; }
 // ── SUPABASE ──────────────────────────────────────────
 const SUPABASE_URL = 'https://frvmsufiugdntcvgbmdo.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_pxUZ1XGssw8H331vlk7QVg_0cPQmT-w';
-const ADMIN_PW     = '!$911311pq!$';
+const ADMIN_PW_HASH = '42baedd264cddd6aa252b60186c929fe9c7a1724ee81043975cd26683bcd797f';
 const BUCKET       = 'lofi-files';
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
 
 // ── ADMIN STATE ───────────────────────────────────────
 let isAdmin = false;
@@ -1185,9 +1190,10 @@ document.getElementById('admin-modal-cancel').addEventListener('click', closeAdm
 document.getElementById('admin-modal-backdrop').addEventListener('click', e => {
   if (e.target === document.getElementById('admin-modal-backdrop')) closeAdminModal();
 });
-document.getElementById('admin-modal-confirm').addEventListener('click', () => {
+document.getElementById('admin-modal-confirm').addEventListener('click', async () => {
   const pw = document.getElementById('admin-pw-input').value;
-  if (pw === ADMIN_PW) {
+  const hash = await sha256(pw);
+  if (hash === ADMIN_PW_HASH) {
     setAdminMode(true);
     closeAdminModal();
     // 관리자 모드 진입 시 UI 갱신
@@ -1200,7 +1206,7 @@ document.getElementById('admin-modal-confirm').addEventListener('click', () => {
     document.getElementById('admin-pw-error').style.display = 'block';
   }
 });
-document.getElementById('admin-pw-input').addEventListener('keydown', e => {
+document.getElementById('admin-pw-input').addEventListener('keydown', async e => {
   if (e.code === 'Enter') document.getElementById('admin-modal-confirm').click();
 });
 
